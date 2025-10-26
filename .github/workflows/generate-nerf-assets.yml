@@ -1,0 +1,65 @@
+name: Generate NeRF Assets
+
+on:
+  workflow_dispatch:
+    inputs:
+      arxiv_id:
+        description: "arXiv ID for NeRF paper"
+        required: false
+        default: "2003.08934"
+      fig1_page:
+        description: "Fallback PDF page number for Fig.1"
+        required: false
+        default: "1"
+      fig2_page:
+        description: "Fallback PDF page number for Fig.2"
+        required: false
+        default: "2"
+      commit_outputs:
+        description: "Commit generated PNGs into outputs/ directory (true/false)"
+        required: false
+        default: "true"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y poppler-utils imagemagick ghostscript texlive-latex-extra texlive-fonts-recommended
+
+      - name: Generate Fig.1/2
+        env:
+          ARXIV_ID: ${{ github.event.inputs.arxiv_id }}
+          FIG1_PAGE: ${{ github.event.inputs.fig1_page }}
+          FIG2_PAGE: ${{ github.event.inputs.fig2_page }}
+          NO_INTERACTIVE: "1"
+        run: |
+          mkdir -p outputs
+          bash scripts/extract_nerf_figs.sh
+
+      - name: Build blue-white one-pager
+        run: |
+          bash scripts/build_onepager.sh
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: nerf-assets
+          path: |
+            outputs/fig1_300dpi.png
+            outputs/fig2_300dpi.png
+            assets/volume_rendering_onepager_300dpi.png
+
+      - name: Commit outputs (optional)
+        if: ${{ github.event.inputs.commit_outputs == 'true' }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add outputs/fig1_300dpi.png outputs/fig2_300dpi.png assets/volume_rendering_onepager_300dpi.png || true
+          git commit -m "chore: add NeRF Fig.1/2 PNGs and volume rendering one-pager" || echo "Nothing to commit"
+          git push
