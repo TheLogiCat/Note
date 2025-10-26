@@ -1,0 +1,73 @@
+\documentclass[tikz,border=8pt]{standalone}
+\usepackage{amsmath, amssymb}
+% \usepackage[sfdefault]{roboto} % 若缺字体可注释
+\usepackage{sfmath}
+\usetikzlibrary{arrows.meta, positioning, shapes.multipart, calc, backgrounds, fit}
+
+% 蓝白配色
+\definecolor{BrandBlue}{HTML}{0B5FFF}
+\definecolor{LightBlue}{HTML}{E6F0FF}
+\definecolor{DarkBlue}{HTML}{063A99}
+\definecolor{LineBlue}{HTML}{2A6CF0}
+\definecolor{Gray}{gray}{0.25}
+
+\begin{document}
+\begin{tikzpicture}[font=\sffamily, node distance=8mm]
+
+\node[draw=BrandBlue, very thick, rounded corners=6pt, fill=LightBlue, inner sep=6mm, minimum width=330mm, minimum height=195mm] (bg) {};
+
+\node[anchor=west, align=left, text=DarkBlue] at ($(bg.west)+(8mm,65mm)$) {\LARGE \textbf{Volume Rendering (Emission-Absorption)}\\[-1mm]\large 蓝白一页图：公式、流程、与 $\alpha$ 合成示例};
+
+\node[draw=BrandBlue, rounded corners=5pt, fill=white, very thick, align=left, inner sep=4mm, text=Gray, minimum width=150mm] (eqs) at ($(bg.center)+(0,40mm)$) {%
+\begin{minipage}{145mm}
+\textbf{沿射线} $\mathbf r(t)=\mathbf o + t\mathbf d,\ t\in[t_n,t_f]$\\[1mm]
+\textbf{像素颜色：}
+\[
+C(\mathbf r)=\int_{t_n}^{t_f} T(t)\,\sigma(\mathbf r(t))\,\mathbf c(\mathbf r(t),\mathbf d)\,dt
+\]
+\textbf{透过率：}
+\[
+T(t)=\exp\!\left(-\int_{t_n}^{t}\sigma(\mathbf r(s))\,ds\right)
+\]
+\textbf{离散 $\alpha$ 合成：}
+\[
+\alpha_i=1-e^{-\sigma_i\Delta t_i},\quad
+w_i=\alpha_i\!\!\prod_{j<i}(1-\alpha_j),\quad
+C\approx\sum_i w_i\,\mathbf c_i
+\]
+\end{minipage}
+};
+
+\node[draw=BrandBlue, very thick, rounded corners=5pt, fill=white, minimum width=62mm, minimum height=20mm, align=center] (cam) at ($(bg.center)+(-100mm,-5mm)$) {\large 相机射线 $\mathbf r(t)$\\[-1mm]\small 像素发出一条射线};
+
+\node[draw=BrandBlue, very thick, rounded corners=5pt, fill=white, minimum width=62mm, minimum height=20mm, align=center, right=15mm of cam] (samples) {\large 分层采样 $t_i$\\[-1mm]\small 均匀 + 重要性细采样};
+
+\node[draw=BrandBlue, very thick, rounded corners=5pt, fill=white, minimum width=62mm, minimum height=20mm, align=center, right=15mm of samples] (mlp) {\large MLP $f_\theta(\mathbf x,\mathbf d)$\\[-1mm]\small 输出 $\sigma_i,\ \mathbf c_i$};
+
+\node[draw=BrandBlue, very thick, rounded corners=5pt, fill=white, minimum width=62mm, minimum height=20mm, align=center, right=15mm of mlp] (acc) {\large 前向$\alpha$合成\\[-1mm]\small $w_i,\ C \leftarrow \sum w_i\mathbf c_i$};
+
+\draw[-{Latex[length=3mm,width=2mm]}, line width=1.4pt, color=LineBlue] (cam) -- (samples);
+\draw[-{Latex[length=3mm,width=2mm]}, line width=1.4pt, color=LineBlue] (samples) -- (mlp);
+\draw[-{Latex[length=3mm,width=2mm]}, line width=1.4pt, color=LineBlue] (mlp) -- (acc);
+
+\begin{scope}[shift={($(samples.south)+(0,-26mm)$)}]
+  \draw[line width=1.2pt, color=DarkBlue] (-35mm,0) -- (35mm,0);
+  \foreach \x/\lab in {-28/t_1,-14/t_2,0/t_3,14/t_4,28/t_5}{
+    \filldraw[BrandBlue] (\x,0) circle (2.0pt);
+    \node[below, text=Gray] at (\x,-0mm) {\small $\lab$};
+  }
+  \node[above, text=DarkBlue] at (0,0mm) {\small 射线采样点};
+\end{scope}
+
+\node[draw=BrandBlue, very thick, rounded corners=5pt, fill=white, align=left, inner sep=4mm, minimum width=310mm] (alpha) at ($(bg.south)+(0,42mm)$) {%
+\begin{minipage}{300mm}
+\textbf{例：} 三个采样点（近到远）$\ (\alpha_1,\alpha_2,\alpha_3)=(0.7,0.2,0.1)$，颜色 $\mathbf c_1=(1,0.8,0.6)$，$\mathbf c_2=(0.2,0.6,1)$，$\mathbf c_3=(0.9,0.1,0.1)$\\[1mm]
+累积：$T_1=1,\ w_1=0.7$；$T_2=0.3,\ w_2=0.06$；$T_3=0.24,\ w_3=0.024$\\
+颜色：$C\approx 0.7\,\mathbf c_1+0.06\,\mathbf c_2+0.024\,\mathbf c_3$（远处贡献被前景遮蔽减弱）
+\end{minipage}
+};
+
+\node[anchor=south east, text=Gray] at ($(bg.south east)+(-5mm,5mm)$) {\small 配色：蓝白 | 可用于 NeRF 讲解};
+
+\end{tikzpicture}
+\end{document}
